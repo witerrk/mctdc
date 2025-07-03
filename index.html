@@ -24,10 +24,10 @@
             const statusMessageElement = document.getElementById('statusMessage');
             const urlParams = new URLSearchParams(window.location.search);
 
-            // --- WAŻNE! ZMIEŃ TEN ADRES NA ADRES SWOJEGO SERWERA POŚREDNICZĄCEGO Z REPLIT ---
-            // Przykład: 'https://moj-discord-api.twojauzytkownik.repl.co/wyslij_wiadomosc'
-            const API_GATEWAY_URL = 'https://mctdc.witeczeq2137.repl.co/wyslij_wiadomosc';
-            // ----------------------------------------------------------------------------------
+            // --- WAŻNE! ZMIENIONO TEN ADRES NA LOKALNY SERWER ---
+            // Gdy serwer Express działa na Twoim komputerze na porcie 3000
+            const API_GATEWAY_URL = 'http://localhost:3000/wyslij_wiadomosc';
+            // ----------------------------------------------------
 
             const trescWiadomosci = urlParams.get('wiadomosc'); // Parametr 'wiadomosc' z URL
             const idKanalu = urlParams.get('kanal'); // Opcjonalny parametr 'kanal' z URL
@@ -57,12 +57,14 @@
                     statusMessageElement.textContent = `Sukces: ${result.message}`;
                     statusMessageElement.className = 'success';
                 } else {
-                    statusMessageElement.textContent = `Błąd: ${result.error || 'Nieznany błąd.'}`;
+                    // Sprawdź, czy serwer zwrócił wiadomość o błędzie
+                    const errorMessage = result.error || 'Nieznany błąd.';
+                    statusMessageElement.textContent = `Błąd: ${errorMessage}`;
                     statusMessageElement.className = 'error';
                 }
 
             } catch (error) {
-                statusMessageElement.textContent = `Błąd połączenia: ${error.message}. Upewnij się, że serwer pośredniczący działa i jest dostępny.`;
+                statusMessageElement.textContent = `Błąd połączenia: ${error.message}. Upewnij się, że lokalny serwer działa i jest dostępny.`;
                 statusMessageElement.className = 'error';
                 console.error('Błąd wysyłania do API:', error);
             } finally {
