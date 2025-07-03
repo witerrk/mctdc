@@ -1,1 +1,76 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCTDC Parser</title>
+    <style>
+        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background-color: #f0f0f0; color: #333; font-size: 1.2em; }
+        .message-box { text-align: center; padding: 20px; border: 1px solid #ccc; border-radius: 8px; background-color: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: gray; font-size: 0.8em; margin-top: 10px; }
+    </style>
+</head>
+<body>
 
+    <div class="message-box">
+        <p id="statusMessage">Ładowanie...</p>
+        <p class="info">Ta strona automatycznie przetwarza komendę i próbuje zamknąć okno.</p>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const statusMessageElement = document.getElementById('statusMessage');
+            const urlParams = new URLSearchParams(window.location.search);
+
+            // --- WAŻNE! ZMIEŃ TEN ADRES NA ADRES SWOJEGO SERWERA POŚREDNICZĄCEGO Z REPLIT ---
+            // Przykład: 'https://moj-discord-api.twojauzytkownik.repl.co/wyslij_wiadomosc'
+            const API_GATEWAY_URL = 'https://replit.com/@witeczeq2137/mctdc/wyslij_wiadomosc';
+            // ----------------------------------------------------------------------------------
+
+            const trescWiadomosci = urlParams.get('wiadomosc'); // Parametr 'wiadomosc' z URL
+            const idKanalu = urlParams.get('kanal'); // Opcjonalny parametr 'kanal' z URL
+
+            if (!trescWiadomosci) {
+                statusMessageElement.textContent = 'Błąd: Brak parametru "wiadomosc" w URL.';
+                statusMessageElement.className = 'error';
+                setTimeout(() => window.close(), 3000);
+                return;
+            }
+
+            try {
+                const response = await fetch(API_GATEWAY_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        tresc: decodeURIComponent(trescWiadomosci), // Dekodujemy treść wiadomości
+                        kanalId: idKanalu // Przekazujemy ID kanału, jeśli podano
+                    }),
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    statusMessageElement.textContent = `Sukces: ${result.message}`;
+                    statusMessageElement.className = 'success';
+                } else {
+                    statusMessageElement.textContent = `Błąd: ${result.error || 'Nieznany błąd.'}`;
+                    statusMessageElement.className = 'error';
+                }
+
+            } catch (error) {
+                statusMessageElement.textContent = `Błąd połączenia: ${error.message}. Upewnij się, że serwer pośredniczący działa i jest dostępny.`;
+                statusMessageElement.className = 'error';
+                console.error('Błąd wysyłania do API:', error);
+            } finally {
+                setTimeout(() => {
+                    window.close(); // Próba zamknięcia okna po 3 sekundach
+                }, 3000);
+            }
+        });
+    </script>
+</body>
+</html>
