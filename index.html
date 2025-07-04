@@ -68,11 +68,18 @@
             currentMessageContentElement.textContent = currentMessage;
 
             // Logika dodawania litery
+            // Logika dodawania litery
             if (addLetter) {
                 const decodedLetter = decodeURIComponent(addLetter);
-                currentMessage += decodedLetter; // Dodaj nową literę
+                if (decodedLetter === '_BACKSPACE_') {
+                    currentMessage = currentMessage.slice(0, -1); // Usuń ostatni znak
+                } else {
+                    currentMessage += decodedLetter; // Dodaj nową literę
+                }
+                
                 setCookie('mcDiscordMessage', currentMessage, 7); // Zapisz zaktualizowaną wiadomość w ciasteczku na 7 dni
-                statusMessageElement.textContent = `Dodano '${decodedLetter}'. Wiadomość: ${currentMessage}`;
+                statusMessageElement.textContent = `Dodano '${decodedLetter === '_BACKSPACE_' ? '[BACKSPACE]' : decodedLetter}'. Wiadomość: ${currentMessage}`;
+                currentMessageContentElement.textContent = currentMessage; // Aktualizuj wyświetlaną wiadomość
                 statusMessageElement.className = 'info';
                 setTimeout(() => window.close(), 100); // Szybkie zamknięcie po dodaniu litery
                 return;
