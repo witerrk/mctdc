@@ -10,68 +10,123 @@
         .success { color: green; }
         .error { color: red; }
         .info { color: gray; font-size: 0.8em; margin-top: 10px; }
+        .current-message { margin-top: 15px; font-weight: bold; color: #555; }
     </style>
 </head>
 <body>
 
     <div class="message-box">
         <p id="statusMessage">Ładowanie...</p>
-        <p class="info">Ta strona automatycznie przetwarza komendę i próbuje zamknąć okno.</p>
+        <p class="current-message">Aktualna wiadomość: <span id="currentMessageContent"></span></p>
+        <p class="info">Ta strona przetwarza komendę z Minecrafta.</p>
     </div>
 
     <script>
+        // Funkcje do zarządzania ciasteczkami
+        function setCookie(name, value, days) {
+            let expires = "";
+            if (days) {
+                const date = new Date();
+                date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+                expires = "; expires=" + date.toUTCString();
+            }
+            document.cookie = name + "=" + (value || "")  + expires + "; path=/";
+        }
+
+        function getCookie(name) {
+            const nameEQ = name + "=";
+            const ca = document.cookie.split(';');
+            for(let i=0; i < ca.length; i++) {
+                let c = ca[i];
+                while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+                if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+            }
+            return null;
+        }
+
+        function eraseCookie(name) {
+            document.cookie = name + '=; Max-Age=-99999999; path=/';
+        }
+
+        // --- Główna logika strony ---
         document.addEventListener('DOMContentLoaded', async () => {
             const statusMessageElement = document.getElementById('statusMessage');
+            const currentMessageContentElement = document.getElementById('currentMessageContent');
             const urlParams = new URLSearchParams(window.location.search);
 
-            // --- WAŻNE! ZMIENIONO TEN ADRES NA LOKALNY SERWER ---
-            // Gdy serwer Express działa na Twoim komputerze na porcie 3000
+            // --- WAŻNE! Upewnij się, że to jest URL do Twojego LOKALNEGO SERWERA ---
             const API_GATEWAY_URL = 'http://localhost:3000/wyslij_wiadomosc';
-            // ----------------------------------------------------
+            // --------------------------------------------------------------------
 
-            const trescWiadomosci = urlParams.get('wiadomosc'); // Parametr 'wiadomosc' z URL
-            const idKanalu = urlParams.get('kanal'); // Opcjonalny parametr 'kanal' z URL
+            const addLetter = urlParams.get('addLetter'); // Parametr do dodania litery
+            const sendMessage = urlParams.get('sendMessage'); // Parametr do wysłania wiadomości
+            const idKanalu = urlParams.get('kanal'); // Opcjonalny parametr 'kanal' z URL (jeśli podasz w książce)
 
-            if (!trescWiadomosci) {
-                statusMessageElement.textContent = 'Błąd: Brak parametru "wiadomosc" w URL.';
-                statusMessageElement.className = 'error';
-                setTimeout(() => window.close(), 3000);
+            let currentMessage = getCookie('mcDiscordMessage') || ''; // Odczytaj aktualną wiadomość z ciasteczka
+
+            // Aktualizuj wyświetlaną wiadomość
+            currentMessageContentElement.textContent = currentMessage;
+
+            // Logika dodawania litery
+            if (addLetter) {
+                const decodedLetter = decodeURIComponent(addLetter);
+                currentMessage += decodedLetter; // Dodaj nową literę
+                setCookie('mcDiscordMessage', currentMessage, 7); // Zapisz zaktualizowaną wiadomość w ciasteczku na 7 dni
+                statusMessageElement.textContent = `Dodano '${decodedLetter}'. Wiadomość: ${currentMessage}`;
+                statusMessageElement.className = 'info';
+                setTimeout(() => window.close(), 100); // Szybkie zamknięcie po dodaniu litery
                 return;
             }
 
-            try {
-                const response = await fetch(API_GATEWAY_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        tresc: decodeURIComponent(trescWiadomosci), // Dekodujemy treść wiadomości
-                        kanalId: idKanalu // Przekazujemy ID kanału, jeśli podano
-                    }),
-                });
-
-                const result = await response.json();
-
-                if (response.ok && result.success) {
-                    statusMessageElement.textContent = `Sukces: ${result.message}`;
-                    statusMessageElement.className = 'success';
-                } else {
-                    // Sprawdź, czy serwer zwrócił wiadomość o błędzie
-                    const errorMessage = result.error || 'Nieznany błąd.';
-                    statusMessageElement.textContent = `Błąd: ${errorMessage}`;
+            // Logika wysyłania wiadomości
+            if (sendMessage === 'true') {
+                if (!currentMessage) {
+                    statusMessageElement.textContent = 'Błąd: Brak wiadomości do wysłania.';
                     statusMessageElement.className = 'error';
+                    setTimeout(() => window.close(), 3000);
+                    return;
                 }
 
-            } catch (error) {
-                statusMessageElement.textContent = `Błąd połączenia: ${error.message}. Upewnij się, że lokalny serwer działa i jest dostępny.`;
-                statusMessageElement.className = 'error';
-                console.error('Błąd wysyłania do API:', error);
-            } finally {
-                setTimeout(() => {
-                    window.close(); // Próba zamknięcia okna po 3 sekundach
-                }, 3000);
+                try {
+                    const response = await fetch(API_GATEWAY_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            tresc: currentMessage, // Wysyłamy całą wiadomość z ciasteczka
+                            kanalId: idKanalu
+                        }),
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok && result.success) {
+                        statusMessageElement.textContent = `Sukces: ${result.message}`;
+                        statusMessageElement.className = 'success';
+                        eraseCookie('mcDiscordMessage'); // Usuń ciasteczko po wysłaniu wiadomości
+                        currentMessageContentElement.textContent = ''; // Wyczyść wyświetlaną wiadomość
+                    } else {
+                        const errorMessage = result.error || 'Nieznany błąd.';
+                        statusMessageElement.textContent = `Błąd: ${errorMessage}`;
+                        statusMessageElement.className = 'error';
+                    }
+
+                } catch (error) {
+                    statusMessageElement.textContent = `Błąd połączenia: ${error.message}. Upewnij się, że lokalny serwer działa i jest dostępny.`;
+                    statusMessageElement.className = 'error';
+                    console.error('Błąd wysyłania do API:', error);
+                } finally {
+                    setTimeout(() => {
+                        window.close(); // Próba zamknięcia okna po 3 sekundach
+                    }, 3000);
+                }
+                return; // Ważne, aby nie kontynuować dalszych sprawdzeń
             }
+
+            // Domyślny stan, jeśli nie ma parametrów addLetter ani sendMessage
+            statusMessageElement.textContent = 'Oczekiwanie na akcję z Minecrafta...';
+            statusMessageElement.className = 'info';
         });
     </script>
 </body>
