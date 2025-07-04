@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MCTDC Parser</title>
+    <title>MCTDC Parser - Klawiatura Minecraft</title>
     <style>
         body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background-color: #f0f0f0; color: #333; font-size: 1.2em; }
         .message-box { text-align: center; padding: 20px; border: 1px solid #ccc; border-radius: 8px; background-color: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
@@ -68,96 +68,51 @@
             currentMessageContentElement.textContent = currentMessage;
 
             // Logika dodawania litery
-            if (addLetter !== null) { // Sprawdzamy, czy parametr 'addLetter' w ogóle istnieje
+            if (addLetter !== null) { // Ważna zmiana: sprawdzamy, czy parametr istnieje
                 // Wcześniej: const decodedLetter = decodeURIComponent(addLetter);
-                // Teraz: Wiemy, że URLSearchParams.get() automatycznie dekoduje.
-                // Jeśli 'addLetter' istnieje, to przypisujemy jego wartość do 'letterToAdd'.
+                // Teraz: Wiemy, że URLSearchParams.get() automatycznie dekoduje, więc używamy bezpośrednio
                 const letterToAdd = addLetter; 
 
-                console.log('--- Debug Spacji ---');
-                console.log('Parametr addLetter (bezpośrednio z URLSearchParams):', addLetter, '[' + addLetter + ']'); // Z nawiasami, by widzieć spacje
-                console.log('Litera do dodania (letterToAdd):', letterToAdd, '[' + letterToAdd + ']'); // Z nawiasami
+                // --- START LINI DO DEBUGOWANIA SPACJI ---
+                console.log('--- Debug Spacji (start) ---');
+                console.log('Parametr addLetter (bezpośrednio z URLSearchParams):', addLetter, '[' + addLetter + ']');
+                console.log('Litera do dodania (letterToAdd):', letterToAdd, '[' + letterToAdd + ']');
                 console.log('Typ litery do dodania:', typeof letterToAdd);
                 console.log('Długość litery do dodania:', letterToAdd.length);
-                console.log('ASCII/Unicode litery do dodania (pierwszy znak):', letterToAdd.charCodeAt(0));
-                console.log('Aktualna wiadomość przed dodaniem:', currentMessage, '[' + currentMessage + ']');
                 
-                if (letterToAdd === '_BACKSPACE_') {
-                    currentMessage = currentMessage.slice(0, -1);
+                // Sprawdzamy, czy string nie jest pusty przed próbą charCodeAt
+                if (letterToAdd.length > 0) {
+                    console.log('ASCII/Unicode litery do dodania (pierwszy znak):', letterToAdd.charCodeAt(0));
                 } else {
-                    currentMessage += letterToAdd;
+                    console.log('ASCII/Unicode litery do dodania (pierwszy znak): Litera jest pusta.');
+                }
+                console.log('Aktualna wiadomość przed dodaniem:', currentMessage, '[' + currentMessage + ']');
+                // --- KONIEC LINI DO DEBUGOWANIA SPACJI ---
+                
+                // Obsługa backspace oraz dodawania litery
+                if (letterToAdd === '_BACKSPACE_') {
+                    currentMessage = currentMessage.slice(0, -1); // Usuń ostatni znak
+                } else {
+                    currentMessage += letterToAdd; // Dodaj nową literę
                 }
                 
+                // --- START LINI DO DEBUGOWANIA SPACJI (po dodaniu/usunięciu) ---
                 console.log('Aktualna wiadomość po dodaniu:', currentMessage, '[' + currentMessage + ']');
-                console.log('--- Koniec Debug Spacji ---');
+                console.log('--- Debug Spacji (koniec) ---');
+                // --- KONIEC LINI DO DEBUGOWANIA SPACJI (po dodaniu/usunięciu) ---
 
-                setCookie('mcDiscordMessage', currentMessage, 7);
-                statusMessageElement.textContent = `Dodano '${letterToAdd === '_BACKSPACE_' ? '[BACKSPACE]' : letterToAdd}'. Wiadomość: ${currentMessage}`;
-                currentMessageContentElement.textContent = currentMessage;
-                statusMessageElement.className = 'info';
-                setTimeout(() => window.close(), 100);
-                return;
-            }
-                
                 setCookie('mcDiscordMessage', currentMessage, 7); // Zapisz zaktualizowaną wiadomość w ciasteczku na 7 dni
-                statusMessageElement.textContent = `Dodano '${decodedLetter === '_BACKSPACE_' ? '[BACKSPACE]' : decodedLetter}'. Wiadomość: ${currentMessage}`;
+                statusMessageElement.textContent = `Dodano '${letterToAdd === '_BACKSPACE_' ? '[BACKSPACE]' : letterToAdd}'. Wiadomość: ${currentMessage}`;
                 currentMessageContentElement.textContent = currentMessage; // Aktualizuj wyświetlaną wiadomość
                 statusMessageElement.className = 'info';
                 setTimeout(() => window.close(), 100); // Szybkie zamknięcie po dodaniu litery
                 return;
             }
 
-            // Logika wysyłania wiadomości
-            if (sendMessage === 'true') {
-                if (!currentMessage) {
-                    statusMessageElement.textContent = 'Błąd: Brak wiadomości do wysłania.';
-                    statusMessageElement.className = 'error';
-                    setTimeout(() => window.close(), 3000);
-                    return;
-                }
-
-                try {
-                    const response = await fetch(API_GATEWAY_URL, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            tresc: currentMessage, // Wysyłamy całą wiadomość z ciasteczka
-                            kanalId: idKanalu
-                        }),
-                    });
-
-                    const result = await response.json();
-
-                    if (response.ok && result.success) {
-                        statusMessageElement.textContent = `Sukces: ${result.message}`;
-                        statusMessageElement.className = 'success';
-                        eraseCookie('mcDiscordMessage'); // Usuń ciasteczko po wysłaniu wiadomości
-                        currentMessageContentElement.textContent = ''; // Wyczyść wyświetlaną wiadomość
-                    } else {
-                        const errorMessage = result.error || 'Nieznany błąd.';
-                        statusMessageElement.textContent = `Błąd: ${errorMessage}`;
-                        statusMessageElement.className = 'error';
-                    }
-
-                } catch (error) {
-                    statusMessageElement.textContent = `Błąd połączenia: ${error.message}. Upewnij się, że lokalny serwer działa i jest dostępny.`;
-                    statusMessageElement.className = 'error';
-                    console.error('Błąd wysyłania do API:', error);
-                } finally {
-                    setTimeout(() => {
-                        window.close(); // Próba zamknięcia okna po 3 sekundach
-                    }, 3000);
-                }
-                return; // Ważne, aby nie kontynuować dalszych sprawdzeń
-            }
-
             // Domyślny stan, jeśli nie ma parametrów addLetter ani sendMessage
             statusMessageElement.textContent = 'Oczekiwanie na akcję z Minecrafta...';
             statusMessageElement.className = 'info';
         });
-        alert()
     </script>
 </body>
 </html>
