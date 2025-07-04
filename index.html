@@ -71,6 +71,13 @@
             // Logika dodawania litery
             if (addLetter) {
                 const decodedLetter = decodeURIComponent(addLetter);
+                console.log('--- Debug Spacji ---');
+                console.log('Parametr addLetter (bezpośrednio z URLSearchParams):', addLetter);
+                console.log('Litera do dodania (letterToAdd):', letterToAdd);
+                console.log('Typ litery do dodania:', typeof letterToAdd);
+                console.log('Długość litery do dodania:', letterToAdd.length); // Sprawdź, czy to na pewno 1
+                console.log('ASCII/Unicode litery do dodania:', letterToAdd.charCodeAt(0)); // Sprawdź, czy to 32 (kod spacji)
+                console.log('Aktualna wiadomość przed dodaniem:', currentMessage, '[' + currentMessage + ']');
                 if (decodedLetter === '_BACKSPACE_') {
                     currentMessage = currentMessage.slice(0, -1); // Usuń ostatni znak
                 } else {
