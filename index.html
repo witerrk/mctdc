@@ -3,115 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MCTDC Parser - Klawiatura Minecraft</title>
+    <title>MCTDC Parser</title>
     <style>
         body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background-color: #f0f0f0; color: #333; font-size: 1.2em; }
         .message-box { text-align: center; padding: 20px; border: 1px solid #ccc; border-radius: 8px; background-color: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .success { color: green; }
         .error { color: red; }
         .info { color: gray; font-size: 0.8em; margin-top: 10px; }
-        .current-message { margin-top: 15px; font-weight: bold; color: #555; }
     </style>
 </head>
 <body>
 
     <div class="message-box">
         <p id="statusMessage">Ładowanie...</p>
-        <p class="current-message">Aktualna wiadomość: <span id="currentMessageContent"></span></p>
-        <p class="info">Ta strona przetwarza komendę z Minecrafta.</p>
+        <p class="info">Ta strona automatycznie przetwarza komendę i próbuje zamknąć okno.</p>
     </div>
 
     <script>
-        // Funkcje do zarządzania ciasteczkami
-        function setCookie(name, value, days) {
-            let expires = "";
-            if (days) {
-                const date = new Date();
-                date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
-                expires = "; expires=" + date.toUTCString();
-            }
-            document.cookie = name + "=" + (value || "")  + expires + "; path=/";
-        }
-
-        function getCookie(name) {
-            const nameEQ = name + "=";
-            const ca = document.cookie.split(';');
-            for(let i=0; i < ca.length; i++) {
-                let c = ca[i];
-                while (c.charAt(0) === ' ') c = c.substring(1, c.length);
-                if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
-            }
-            return null;
-        }
-
-        function eraseCookie(name) {
-            document.cookie = name + '=; Max-Age=-99999999; path=/';
-        }
-
-        // --- Główna logika strony ---
         document.addEventListener('DOMContentLoaded', async () => {
             const statusMessageElement = document.getElementById('statusMessage');
-            const currentMessageContentElement = document.getElementById('currentMessageContent');
             const urlParams = new URLSearchParams(window.location.search);
 
-            // --- WAŻNE! Upewnij się, że to jest URL do Twojego LOKALNEGO SERWERA ---
+            // --- WAŻNE! ZMIENIONO TEN ADRES NA LOKALNY SERWER ---
+            // Gdy serwer Express działa na Twoim komputerze na porcie 3000
             const API_GATEWAY_URL = 'http://localhost:3000/wyslij_wiadomosc';
-            // --------------------------------------------------------------------
+            // ----------------------------------------------------
 
-            const addLetter = urlParams.get('addLetter'); // Parametr do dodania litery
-            const sendMessage = urlParams.get('sendMessage'); // Parametr do wysłania wiadomości
-            const idKanalu = urlParams.get('kanal'); // Opcjonalny parametr 'kanal' z URL (jeśli podasz w książce)
+            const trescWiadomosci = urlParams.get('wiadomosc'); // Parametr 'wiadomosc' z URL
+            const idKanalu = urlParams.get('kanal'); // Opcjonalny parametr 'kanal' z URL
 
-            let currentMessage = getCookie('mcDiscordMessage') || ''; // Odczytaj aktualną wiadomość z ciasteczka
-
-            // Aktualizuj wyświetlaną wiadomość
-            currentMessageContentElement.textContent = currentMessage;
-
-            // Logika dodawania litery
-            if (addLetter !== null) { // Ważna zmiana: sprawdzamy, czy parametr istnieje
-                // Wcześniej: const decodedLetter = decodeURIComponent(addLetter);
-                // Teraz: Wiemy, że URLSearchParams.get() automatycznie dekoduje, więc używamy bezpośrednio
-                const letterToAdd = addLetter; 
-
-                // --- START LINI DO DEBUGOWANIA SPACJI ---
-                console.log('--- Debug Spacji (start) ---');
-                console.log('Parametr addLetter (bezpośrednio z URLSearchParams):', addLetter, '[' + addLetter + ']');
-                console.log('Litera do dodania (letterToAdd):', letterToAdd, '[' + letterToAdd + ']');
-                console.log('Typ litery do dodania:', typeof letterToAdd);
-                console.log('Długość litery do dodania:', letterToAdd.length);
-                
-                // Sprawdzamy, czy string nie jest pusty przed próbą charCodeAt
-                if (letterToAdd.length > 0) {
-                    console.log('ASCII/Unicode litery do dodania (pierwszy znak):', letterToAdd.charCodeAt(0));
-                } else {
-                    console.log('ASCII/Unicode litery do dodania (pierwszy znak): Litera jest pusta.');
-                }
-                console.log('Aktualna wiadomość przed dodaniem:', currentMessage, '[' + currentMessage + ']');
-                // --- KONIEC LINI DO DEBUGOWANIA SPACJI ---
-                
-                // Obsługa backspace oraz dodawania litery
-                if (letterToAdd === '_BACKSPACE_') {
-                    currentMessage = currentMessage.slice(0, -1); // Usuń ostatni znak
-                } else {
-                    currentMessage += letterToAdd; // Dodaj nową literę
-                }
-                
-                // --- START LINI DO DEBUGOWANIA SPACJI (po dodaniu/usunięciu) ---
-                console.log('Aktualna wiadomość po dodaniu:', currentMessage, '[' + currentMessage + ']');
-                console.log('--- Debug Spacji (koniec) ---');
-                // --- KONIEC LINI DO DEBUGOWANIA SPACJI (po dodaniu/usunięciu) ---
-
-                setCookie('mcDiscordMessage', currentMessage, 7); // Zapisz zaktualizowaną wiadomość w ciasteczku na 7 dni
-                statusMessageElement.textContent = `Dodano '${letterToAdd === '_BACKSPACE_' ? '[BACKSPACE]' : letterToAdd}'. Wiadomość: ${currentMessage}`;
-                currentMessageContentElement.textContent = currentMessage; // Aktualizuj wyświetlaną wiadomość
-                statusMessageElement.className = 'info';
-                setTimeout(() => window.close(), 100); // Szybkie zamknięcie po dodaniu litery
+            if (!trescWiadomosci) {
+                statusMessageElement.textContent = 'Błąd: Brak parametru "wiadomosc" w URL.';
+                statusMessageElement.className = 'error';
+                setTimeout(() => window.close(), 3000);
                 return;
             }
 
-            // Domyślny stan, jeśli nie ma parametrów addLetter ani sendMessage
-            statusMessageElement.textContent = 'Oczekiwanie na akcję z Minecrafta...';
-            statusMessageElement.className = 'info';
+            try {
+                const response = await fetch(API_GATEWAY_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        tresc: decodeURIComponent(trescWiadomosci), // Dekodujemy treść wiadomości
+                        kanalId: idKanalu // Przekazujemy ID kanału, jeśli podano
+                    }),
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    statusMessageElement.textContent = `Sukces: ${result.message}`;
+                    statusMessageElement.className = 'success';
+                } else {
+                    // Sprawdź, czy serwer zwrócił wiadomość o błędzie
+                    const errorMessage = result.error || 'Nieznany błąd.';
+                    statusMessageElement.textContent = `Błąd: ${errorMessage}`;
+                    statusMessageElement.className = 'error';
+                }
+
+            } catch (error) {
+                statusMessageElement.textContent = `Błąd połączenia: ${error.message}. Upewnij się, że lokalny serwer działa i jest dostępny.`;
+                statusMessageElement.className = 'error';
+                console.error('Błąd wysyłania do API:', error);
+            } finally {
+                setTimeout(() => {
+                    window.close(); // Próba zamknięcia okna po 3 sekundach
+                }, 3000);
+            }
         });
     </script>
 </body>
